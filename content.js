@@ -81,17 +81,29 @@ function calculateRemainTime() {
       ".weekly-attendance-container__highcharts svg .highcharts-title"
     );
     if (originalValueElement) {
+      //Constants
       const WEEKLY_MINUTES_REQUIRE = 2400;
       const DAILY_MINUTES_REQUIRE = 480;
 
+      // Declare variable
       const header = document.querySelector(
         ".weekly-attendance-container__header > div"
       );
-
       let originalValue = convertToMinutes(
         originalValueElement.innerHTML.trim()
       );
       let accumulatedValue = originalValue;
+
+      // Weekly timelog info
+      if(!document.querySelector("#weeklyInfo")) {
+        const weeklyInfo = document.createElement("em");
+        weeklyInfo.id = "weeklyInfo";
+        weeklyInfo.style.color = "grey";
+        weeklyInfo.style.fontStyle = "italic";
+        weeklyInfo.style.fontSize = "14px";
+        weeklyInfo.innerText = `   (Mỗi tuần phải đủ ${WEEKLY_MINUTES_REQUIRE} phút = ${WEEKLY_MINUTES_REQUIRE / 60} giờ)`;
+        header.appendChild(weeklyInfo);
+      }
 
       // Annual Leave
       let annualLeaveMinutes = 0
@@ -107,10 +119,11 @@ function calculateRemainTime() {
           }
         }
       })
-      if(annualLeaveMinutes > 0) {
+      if(!document.querySelector("#annualLeaveInfo") && annualLeaveMinutes > 0) {
         const annualLeaveHours = convertMinutesToHours(annualLeaveMinutes)
         const annualLeaveDays = (annualLeaveMinutes / (DAILY_MINUTES_REQUIRE)).toFixed(2)
         const alElement = document.createElement("div");
+        alElement.id = "annualLeaveInfo";
         alElement.style.color = "blue";
         alElement.innerText = `Trừ ngày phép: ${annualLeaveMinutes} phút = ${annualLeaveHours} = ${annualLeaveDays} ngày`;
         header.appendChild(alElement);
@@ -123,10 +136,11 @@ function calculateRemainTime() {
         if(!element.closest('.weekly-attendance-container__day-card').querySelector('.saturday-leaf-icon, .sunday-leaf-icon')) //exclude weekends
           holidayMinutes += DAILY_MINUTES_REQUIRE
       })
-      if(holidayMinutes > 0) {
+      if(!document.querySelector("#holidayInfo") && holidayMinutes > 0) {
         const holidayHours = convertMinutesToHours(holidayMinutes)
         const holidayDays = (holidayMinutes / (DAILY_MINUTES_REQUIRE)).toFixed(2)
         const holidayElement = document.createElement("div")
+        holidayElement.id = "holidayInfo";
         holidayElement.style.color = "turquoise";
         holidayElement.innerText = `Trừ ngày lễ: ${holidayMinutes} phút = ${holidayHours} = ${holidayDays} ngày`;
         header.appendChild(holidayElement);
@@ -136,11 +150,14 @@ function calculateRemainTime() {
       let remainMinute = WEEKLY_MINUTES_REQUIRE - accumulatedValue - annualLeaveMinutes - holidayMinutes;
       let remainHour = convertMinutesToHours(remainMinute)
       let remainDays = (remainMinute / (DAILY_MINUTES_REQUIRE)).toFixed(2)
-      let newValueText = (remainMinute > 0) ? `Tuần này còn thiếu: ${remainMinute} phút = ${remainHour} = ${remainDays} ngày` : 'Tuần này đã đủ giờ rồi mấy ní!';
-      const newValueElement = document.createElement("div");
-      newValueElement.style.color = (remainMinute > 0) ? "red" : "green";
-      newValueElement.innerText = newValueText;
-      header.appendChild(newValueElement);
+      let remainTimeText = (remainMinute > 0) ? `Tuần này còn thiếu: ${remainMinute} phút = ${remainHour} = ${remainDays} ngày` : 'Tuần này đã đủ giờ rồi mấy ní!';
+      if(!document.querySelector("#remainTimeInfo")) {
+        const remainTimeElement = document.createElement("div");
+        remainTimeElement.id = "remainTimeInfo";
+        remainTimeElement.style.color = (remainMinute > 0) ? "red" : "green";
+        remainTimeElement.innerText = remainTimeText;
+        header.appendChild(remainTimeElement);
+      }
 
       // Today minimum-maximum time
       const dailyContainerElement = document.querySelector('.time-sheet-container__daily-attendance-section');
@@ -152,15 +169,62 @@ function calculateRemainTime() {
       const timeCards = document.querySelectorAll(".daily-attendance-container__daily-attendance-card");
       let timeIn = timeCards[0].children[1].innerText.trim();
       let timeOut = timeCards[1].children[1].innerText.trim();
+
       let lastTime = 0;
       if (timeOut.includes(":")) lastTime = timeOut;
       else if (timeIn.includes(":")) lastTime = timeIn;
+
+      //check if no time logged
       if(lastTime == 0) {
-        const noCheckinElement = document.createElement("div");
-        noCheckinElement.style.color = "red";
-        noCheckinElement.innerText = 'Chưa có giờ checkin kìa! Hôm nay có quên checkin ko?'
-        header.appendChild(noCheckinElement);
-        return;
+        //check if manual checked in
+        const currentManualCheckInInput = document.querySelector("#manualCheckInInput");
+        if(currentManualCheckInInput) {
+          const currentManualCheckInValue = currentManualCheckInInput.value;
+          if(currentManualCheckInValue) {
+            timeIn = currentManualCheckInValue;
+            lastTime = timeIn;
+            if(dailyLeaveType.includes("HalfLeave")){
+              if(calculateTimeDifference(lastTime, "13:00")) lastTime = "13:00"
+              if(calculateTimeDifference(timeIn, "13:00")) timeIn = "13:00"
+            }
+            document.querySelector("#todayMiniumInfo")?.remove();
+            document.querySelector("#todayMaximumInfo")?.remove();
+            document.querySelector("#todayMinutesInfo")?.remove();
+            document.querySelector("#fromNowInfo")?.remove();
+            document.querySelector("#checkoutTimeInfo")?.remove();
+            alert("Tính toán theo giờ checkin tự nhập: " + currentManualCheckInValue)
+          } else {
+            alert("Nhập giờ tự checkin đã!")
+            return;
+          }
+        } else {
+          const noCheckinElement = document.createElement("div");
+          noCheckinElement.style.color = "red";
+          noCheckinElement.innerText = 'Chưa có giờ checkin kìa! Hôm nay có quên checkin ko?'
+          header.appendChild(noCheckinElement);
+
+          const manualCheckInElement = document.createElement("small");
+          manualCheckInElement.style.color = "darkred";
+          header.appendChild(manualCheckInElement);
+          const manualCheckInLabel = document.createElement("label");
+          manualCheckInLabel.innerText = 'Tự nhập giờ checkin (07:00 - 20:00):';
+          manualCheckInElement.appendChild(manualCheckInLabel);
+          const manualCheckInInput = document.createElement("input");
+          manualCheckInInput.type = "time";
+          manualCheckInInput.id = "manualCheckInInput";
+          manualCheckInInput.name = "manualCheckInInput";
+          manualCheckInInput.min = "07:00";
+          manualCheckInInput.max = "20:00";
+          manualCheckInElement.appendChild(manualCheckInInput);
+          const manualCheckInButton = document.createElement("button");
+          manualCheckInButton.innerText = 'Tính toán';
+          manualCheckInButton.style.marginLeft = "5px";
+          manualCheckInButton.style.fontSize = "16px";
+          manualCheckInButton.style.lineHeight = "25px";
+          manualCheckInButton.onclick = function() { calculateRemainTime() };
+          manualCheckInElement.appendChild(manualCheckInButton);
+          return;
+        }
       } else if(dailyLeaveType.includes("HalfLeave")){
         if(calculateTimeDifference(lastTime, "13:00")) lastTime = "13:00"
         if(calculateTimeDifference(timeIn, "13:00")) timeIn = "13:00"
@@ -174,6 +238,7 @@ function calculateRemainTime() {
       let todayMiniumReached = todayMinutes > miniumMinutesADay;
       let todayMiniumText = todayMiniumReached ? `Bây giờ checkout sẽ đủ ${minimumHoursADay} giờ tối thiểu hôm nay` : `Lúc này chưa đủ ${minimumHoursADay} giờ tối thiểu hôm nay, còn ${convertMinutesToHours(miniumMinutesADay - todayMinutes)}`;
       const todayMiniumEl = document.createElement("div");
+      todayMiniumEl.id = "todayMiniumInfo";
       todayMiniumEl.style.color = todayMiniumReached ? "green" : "red";
       todayMiniumEl.innerText = todayMiniumText;
       dailyContainerElement.appendChild(todayMiniumEl);
@@ -183,12 +248,14 @@ function calculateRemainTime() {
       let todayMaximumReached = todayMinutes > maximumMinutesADay;
       let todayMaximumText = todayMaximumReached ? `Lúc này đã quá ${maximumHoursADay} giờ tối đa hôm nay! Về đi thôi!` : `Còn ${convertMinutesToHours(maximumMinutesADay - todayMinutes)} nữa là đến ${maximumHoursADay} giờ tối đa hôm nay`;
       const todayMaximumEl = document.createElement("div");
+      todayMaximumEl.id = "todayMaximumInfo";
       todayMaximumEl.style.color = todayMaximumReached ? "red" : "green";
       todayMaximumEl.innerText = todayMaximumText;
       dailyContainerElement.appendChild(todayMaximumEl);
 
       const todayHours = convertMinutesToHours(todayMaximumReached ? maximumMinutesADay : todayMinutes);
       const todayMinutesEl = document.createElement("div");
+      todayMinutesEl.id = "todayMinutesInfo";
       todayMinutesEl.style.color = todayMiniumReached && !todayMaximumReached ? "green" : "red";
       todayMinutesEl.innerText = `Bây giờ checkout sẽ tích ${todayHours} cho hôm nay`;
       dailyContainerElement.appendChild(todayMinutesEl);
@@ -201,6 +268,7 @@ function calculateRemainTime() {
       const hasRemainMinute = remainMinuteFromNow > 0;
       let remainMinuteFromNowText = hasRemainMinute ? `Bây giờ checkout sẽ còn: ${remainMinuteFromNow} phút = ${remainHourFromNow} = ${remainDaysFromNow} ngày` : 'Bây giờ checkout sẽ đủ giờ nha mấy ní';
       const fromNowElement = document.createElement("div");
+      fromNowElement.id = "fromNowInfo";
       fromNowElement.style.color = hasRemainMinute ? "orange" : "green";
       fromNowElement.innerText = remainMinuteFromNowText;
       header.appendChild(fromNowElement);
@@ -210,18 +278,13 @@ function calculateRemainTime() {
       const checkoutTime = (hasRemainMinute && remainMinuteInOneDay) ? addMinutesToCurrentTime(remainMinuteFromNow) : 0
       if(checkoutTime) {
         const checkoutTimeElement = document.createElement("div");
+        checkoutTimeElement.id = "checkoutTimeInfo";
         checkoutTimeElement.style.color = "purple";
         checkoutTimeElement.innerText = isTimeInRange(checkoutTime) ? `Sẽ đủ giờ khi checkout lúc ${checkoutTime} hôm nay` : '';
         header.appendChild(checkoutTimeElement);
       }
 
-      // Weekly timelog info
-      const weeklyInfo = document.createElement("em");
-      weeklyInfo.style.color = "grey";
-      weeklyInfo.style.fontStyle = "italic";
-      weeklyInfo.style.fontSize = "14px";
-      weeklyInfo.innerText = `Mỗi tuần phải đủ ${WEEKLY_MINUTES_REQUIRE} phút = ${WEEKLY_MINUTES_REQUIRE / 60} giờ`;
-      header.appendChild(weeklyInfo);
+      window.EMPLOYEE_TIMESHEET_ENHANCE = true; // Set a flag to indicate that the script has run successfully
 
     } else {
       calculateRemainTime();
