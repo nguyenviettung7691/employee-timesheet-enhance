@@ -76,6 +76,7 @@ function isTimeInRange(timeString) {
 
 
 function calculateRemainTime() {
+  console.log('%cEMPLOYEE TIMESHEET ENHANCE Version: 2.010825 starting...', 'color: blue; background: white; font-size: 20px');
   setTimeout(function () {
     const originalValueElement = document.querySelector(
       ".weekly-attendance-container__highcharts svg .highcharts-title"
@@ -106,17 +107,22 @@ function calculateRemainTime() {
       }
 
       // Annual Leave
-      let annualLeaveMinutes = 0
       const weekdayContainersTimelogs = document.querySelectorAll('.weekly-attendance-container__day-card .flex-fill .mt-1 .d-flex div')
+      let annualLeaveMinutes = 0
+      const leaveTypes = ["AL", "WFH", "WFA", "OW"];
+      const calculateHalfDay = function (halfDayTime) {
+        if(leaveTypes.includes(halfDayTime)) annualLeaveMinutes += (DAILY_MINUTES_REQUIRE / 2)
+        else if(Number(halfDayTime) > 4) {
+          accumulatedValue -= ((Number(halfDayTime) * 60) - 240).toFixed(0)
+        }
+      }
       weekdayContainersTimelogs.forEach(element => {
         let elementTxt = element.innerText.trim()
-        if(["AL", "WFH", "WFA", "OW"].includes(elementTxt)) annualLeaveMinutes += DAILY_MINUTES_REQUIRE //full-day leave
-        else if(["AL/", "WFH/", "WFA/", "OW/"].some(halfdayLeave => elementTxt.includes(halfdayLeave))) { //partial-day leave
-          annualLeaveMinutes += (DAILY_MINUTES_REQUIRE / 2)
-          let [type, time] = elementTxt.split("/")
-          if(Number(time) > 4) {
-            accumulatedValue -= ((Number(time) * 60) - 240).toFixed(0)
-          }
+        if(leaveTypes.includes(elementTxt)) annualLeaveMinutes += DAILY_MINUTES_REQUIRE //full-day leave
+        else if(elementTxt.includes("/")) { //half-day leave
+          let [morning, afternoon] = elementTxt.split("/")
+          calculateHalfDay(morning);
+          calculateHalfDay(afternoon);
         }
       })
       if(!document.querySelector("#annualLeaveInfo") && annualLeaveMinutes > 0) {
@@ -284,7 +290,7 @@ function calculateRemainTime() {
         header.appendChild(checkoutTimeElement);
       }
 
-      window.EMPLOYEE_TIMESHEET_ENHANCE = true; // Set a flag to indicate that the script has run successfully
+      console.log('%cEMPLOYEE TIMESHEET ENHANCE Version: 2.010825 loaded', 'color: green; background: white; font-size: 20px');
 
     } else {
       calculateRemainTime();

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Employee Timesheet Enhance",
-    "version": "1.090924",
+    "version": "2.010825",
     "permissions": [ "activeTab", "scripting" ],
     "background": {
       "service_worker": "background.js"

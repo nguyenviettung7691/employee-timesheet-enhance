@@ -62,4 +62,10 @@ By following these steps, you can successfully install and manage the `employee-
 
 ## How to use
 
-Go to the "TIMESHEET" tab to see your much needed information. If it doesn't show up after 3 seconds, please refresh.
+* Go to the "TIMESHEET" tab to see your much needed information.
+* If it doesn't show up after 3 seconds, please refresh.
+* Make sure that today's weekday is selected. If not, click on today's weekday and refresh.
+
+## Version
+
+2.010825
